@@ -10,6 +10,8 @@ import java.net.http.HttpResponse;
 
 import static ru.gryaznov.bot.constants.VarConstants.*;
 
+
+//class for parse data about regions
 public class Parser {
 
     public Areas parse() {

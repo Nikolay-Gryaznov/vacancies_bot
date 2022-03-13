@@ -9,6 +9,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import java.util.ArrayList;
 import java.util.List;
 
+//class for creating buttons
 public class ButtonsService {
     public ReplyKeyboardMarkup setButtons (List<KeyboardRow> keyboardRowList){
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();

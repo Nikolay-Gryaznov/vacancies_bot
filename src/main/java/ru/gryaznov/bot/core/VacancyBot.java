@@ -7,7 +7,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import ru.gryaznov.bot.areaparse.Parser;
+import ru.gryaznov.bot.areaParse.Parser;
 import ru.gryaznov.bot.service.SendMessageService;
 import ru.gryaznov.bot.vacancy.Person;
 import ru.gryaznov.bot.vacancy.Vacancies;
@@ -21,6 +21,8 @@ import java.util.HashMap;
 
 import static ru.gryaznov.bot.constants.VarConstants.*;
 
+
+//class with bot business logic
 public class VacancyBot extends TelegramLongPollingBot {
 
     SendMessageService sendMessageService = new SendMessageService();
@@ -33,34 +35,45 @@ public class VacancyBot extends TelegramLongPollingBot {
         super();
     }
 
+    //variables to record data
     boolean waitUpdateJobName = false;
     boolean waitUpdateSalary = false;
     boolean waitUpdateArea = false;
 
+    //variables for inline button
     int callbackMessageId;
     String callbackChatId;
 
+    //variables for requests
     String text, experience, employment, schedule, area, salary, page, vacancySearchOrder;
     static int pageNumber = 0;
+
     Parser parser = new Parser();
+    //Local database
     HashMap<String, Person> personMap = new HashMap<>();
+
+    //main function for listening to updates
     @Override
     public void onUpdateReceived(Update update) {
 
-
+        //processing messages
         if (update.hasMessage() && update.getMessage().hasText()){
             String chatId = String.valueOf(update.getMessage().getChatId());
+
+            //creating new user
             if (!personMap.containsKey(chatId)) {
                 personMap.put(chatId, new Person());
-                System.out.println("new");
             }
+
             try {
                 switch (update.getMessage().getText()){
 
+                    //processing command "/start"
                     case START:
                         execute(sendMessageService.greetingMessage(update));
                         break;
 
+                    //processing button "Найти вакансии"
                     case SEARCH_VACANCIES:
                         waitUpdateSalary = false;
                         waitUpdateJobName = false;
@@ -74,6 +87,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                             break;
                         }
 
+                        //reading data from the database
                         text = personMap.get(chatId).getText();
                         experience = personMap.get(chatId).getExperience();
                         employment = personMap.get(chatId).getEmployment();
@@ -83,6 +97,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                         if (area==null) area = "";
                         salary = personMap.get(chatId).getSalary();
 
+                        //configuring request parameters
                         StringBuilder stringBuilder = new StringBuilder("https://api.hh.ru/vacancies?page=").append(page).append("&");
                         if (!text.equals("")) stringBuilder.append("text=").append(text.toLowerCase().replace(" ", "")).append("&");
                         if (!experience.equals("")) stringBuilder.append("experience=").append(experience).append("&");
@@ -91,27 +106,36 @@ public class VacancyBot extends TelegramLongPollingBot {
                         if (!area.equals("")) stringBuilder.append("area=").append(area).append("&");
                         if (!salary.equals("")) stringBuilder.append("salary=").append(salary).append("&");
                         if (!vacancySearchOrder.equals("")) stringBuilder.append("vacancy_search_order=").append(vacancySearchOrder).append("&");
-                        System.out.println(stringBuilder);
+
+                        //making requests
                         HttpClient client = HttpClient.newHttpClient();
                         HttpRequest request = HttpRequest.newBuilder()
                                 .uri(URI.create(stringBuilder.toString()))
                                 .build();
+
                         try {
                             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                            //check errors
                             if (String.valueOf(response.body()).contains("errors")){
                                 execute(sendMessageService.createMessage(update,
                                         "По вашим параметрам не было найдено вакансий"));
                                 break;
                             }
+
+                            //processing response
                             ObjectMapper mapper = new ObjectMapper();
                             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                             mapper.enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
                             Vacancies vacancies = mapper.readValue(response.body(), Vacancies.class);
+
+                            //outputting vacancies
                             if (vacancies.getItems().isEmpty()){
                                 execute(sendMessageService.createMessage(update,
                                         "По вашим параметрам не было найдено вакансий"));
                                 break;
                             }else {
+
                                 vacancies.getItems().forEach(job ->{
                                     try {
                                         execute(new SendMessage(chatId,
@@ -129,11 +153,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                         pageNumber++;
                         break;
 
-
-                    case MAIN_MENU:
-                        execute(sendMessageService.mainMenu(update));
-                        break;
-
+                    //processing button "Настроить поиск"
                     case SEARCH_SETTINGS:
                         waitUpdateSalary = false;
                         waitUpdateJobName = false;
@@ -143,12 +163,15 @@ public class VacancyBot extends TelegramLongPollingBot {
                         pageNumber = 0;
                         break;
 
+                    //processing other messages
                     default:
+                        //changing the user's "Название вакансии" cell
                         if (waitUpdateJobName){
                             personMap.get(chatId).setText(update.getMessage().getText());
                             execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                             waitUpdateJobName = false;
                             break;
+                        //changing the user's "Доход" cell
                         } else if (waitUpdateSalary) {
                             String res;
                             try{
@@ -160,6 +183,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                             execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                             waitUpdateSalary = false;
                             break;
+                        //changing the user's "Регион" cell
                         }else if (waitUpdateArea){
                             if (parser.parse().getAreaData().containsKey(update.getMessage().getText().toLowerCase())) {
                                 personMap.get(chatId).setArea(update.getMessage().getText());
@@ -167,6 +191,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                             execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                             waitUpdateArea = false;
                             break;
+                        //warning message
                         } else{
                             execute(sendMessageService.createMessage(
                                     update, "Воспользуйтесь кнопками панели или сообщения с настройками"));
@@ -178,11 +203,15 @@ public class VacancyBot extends TelegramLongPollingBot {
                     e.printStackTrace();
                 }
         }
+
         String res = "";
+
+        //processing callbackData
         if(update.hasCallbackQuery()){
             callbackMessageId = update.getCallbackQuery().getMessage().getMessageId();
             callbackChatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
             try {
+                //changing the user's "Опыт работы" cell
                 if (update.getCallbackQuery().getData().equals(NO_EXPERIENCE) ||
                         update.getCallbackQuery().getData().equals(EXPERIENCE_BETWEEN1AND3) ||
                         update.getCallbackQuery().getData().equals(EXPERIENCE_BETWEEN3AND6) ||
@@ -195,6 +224,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                     personMap.get(callbackChatId).setFormExperience(update.getCallbackQuery().getData());
                     execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                 }
+                //changing the user's "График работы" cell
                 if (update.getCallbackQuery().getData().equals(FULL_DAY) ||
                         update.getCallbackQuery().getData().equals(SHIFT) ||
                         update.getCallbackQuery().getData().equals(FLEXIBLE) ||
@@ -209,6 +239,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                     personMap.get(callbackChatId).setFormSchedule(update.getCallbackQuery().getData());
                     execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                 }
+                //changing the user's "Тип занятости" cell
                 if (update.getCallbackQuery().getData().equals(FULL) ||
                         update.getCallbackQuery().getData().equals(PART) ||
                         update.getCallbackQuery().getData().equals(PROJECT) ||
@@ -223,6 +254,7 @@ public class VacancyBot extends TelegramLongPollingBot {
                     personMap.get(callbackChatId).setFormEmployment(update.getCallbackQuery().getData());
                     execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                 }
+                //changing the user's "Тип сортировки" cell
                 if (update.getCallbackQuery().getData().equals(PUBLICATION_DATA) ||
                         update.getCallbackQuery().getData().equals(SALARY_DESC) ||
                         update.getCallbackQuery().getData().equals(SALARY_ASC)){
@@ -236,74 +268,83 @@ public class VacancyBot extends TelegramLongPollingBot {
 
             switch (update.getCallbackQuery().getData()){
 
+                //processing callbackData "Название профессии"
                 case SHOW_JOB_NAME:
                     execute(sendMessageService.jobNameMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить название профессии"
                 case CHANGE_JOB_NAME:
                     execute(sendMessageService.createCallbackMessage(update, "Введите профессию"));
                     waitUpdateJobName = true;
                     break;
 
+                //processing callbackData "Регион"
                 case SHOW_AREA:
                     execute(sendMessageService.areaMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить регион"
                 case CHANGE_AREA:
                     execute(sendMessageService.createCallbackMessage(update, "Введите регион"));
                     waitUpdateArea = true;
                     break;
 
+                //processing callbackData "Опыт работы"
                 case SHOW_EXPERIENCE:
                     execute(sendMessageService.experienceMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить опыт работы"
                 case CHANGE_EXPERIENCE:
                     execute(sendMessageService.changeExperience(update));
                     break;
 
+                //processing callbackData "График работы"
                 case SHOW_SCHEDULE:
                     execute(sendMessageService.scheduleMessage(update, personMap, callbackChatId));
                     break;
+                //processing callbackData "Изменить график работы"
                 case CHANGE_SCHEDULE:
                     execute(sendMessageService.changeSchedule(update));
                     break;
 
+                //processing callbackData "Тип занятости"
                 case SHOW_EMPLOYMENT:
                     execute(sendMessageService.employmentMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить тип занятости"
                 case CHANGE_EMPLOYMENT:
                     execute(sendMessageService.changeEmployment(update));
                     break;
 
+                //processing callbackData "Доход"
                 case SHOW_SALARY:
                     execute(sendMessageService.salaryMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить доход"
                 case CHANGE_SALARY:
                     execute(sendMessageService.createCallbackMessage(update, "Введите желаемый доход"));
                     waitUpdateSalary = true;
                     break;
 
+                //processing callbackData "Тип сортировки"
                 case SHOW_SORTING:
                     execute(sendMessageService.sortingMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Изменить тип сортировки"
                 case CHANGE_SORTING:
                     execute(sendMessageService.changeSorting(update));
                     break;
 
-                case SHOW_PERON:
+                //processing callbackData "Моя анкета"
+                case SHOW_PERSON:
                     execute(sendMessageService.personMessage(update, personMap, callbackChatId));
                     break;
-
+                //processing callbackData "Очистить анкету"
                 case CLEAR_PERSON:
                     personMap.put(callbackChatId, new Person());
 
                     execute(sendMessageService.settingEditMessage(callbackMessageId, callbackChatId));
                     break;
-
+                //processing callbackData "Назад"
                 case BACK:
                     waitUpdateJobName = false;
                     waitUpdateSalary = false;

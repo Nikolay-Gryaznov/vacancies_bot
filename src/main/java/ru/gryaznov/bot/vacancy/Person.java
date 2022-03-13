@@ -1,5 +1,6 @@
 package ru.gryaznov.bot.vacancy;
 
+//class for database
 public class Person {
 
     public Person() {

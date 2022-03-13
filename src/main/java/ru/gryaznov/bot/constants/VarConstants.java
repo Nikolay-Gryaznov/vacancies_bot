@@ -8,17 +8,16 @@ public class VarConstants {
             + "Для поиска вакансий нажмите \"Найти вакансии\", для дальнейшего поиска продолжайте нажимать \"Найти вакансии\"\n"
             + "Если возникают проблемы с заполнением анкеты, воспользуйтесь командой /start";
 
-    public static final String SHOW_PERON = "Моя анкета";
+    public static final String SHOW_PERSON = "Моя анкета";
     public static final String CLEAR_PERSON = "Очистить анкету";
 
     public static final String SEARCH_VACANCIES = "Найти вакансии";
     public static final String SEARCH_SETTINGS = "Настроить поиск";
-    public static final String MAIN_MENU = "Главное меню";
 
     public static final String SETTING_MESSAGE = "Выберите параметр поиска";
 
     public static final String SHOW_JOB_NAME = "Название профессии";
-    public static final String CHANGE_JOB_NAME = "Изменить вакансию";
+    public static final String CHANGE_JOB_NAME = "Изменить название профессии";
 
     public static final String SHOW_AREA = "Регион";
     public static final String CHANGE_AREA = "Изменить регион";

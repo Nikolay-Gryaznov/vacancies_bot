@@ -12,24 +12,13 @@ import java.util.HashMap;
 
 import static ru.gryaznov.bot.constants.VarConstants.*;
 
+//class for creating message
 public class SendMessageService {
 
     ButtonsService buttonsService = new ButtonsService();
 
     public SendMessage greetingMessage(Update update){
         SendMessage sendMessage = createMessage(update, GREETING_MESSAGE);
-        ReplyKeyboardMarkup replyKeyboardMarkup =
-                buttonsService.setButtons(buttonsService.createButtons(
-                        Arrays.asList(
-                                SEARCH_VACANCIES,
-                                SEARCH_SETTINGS)));
-        sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        return sendMessage;
-    }
-
-    public SendMessage mainMenu(Update update){
-        SendMessage sendMessage = createMessage(
-                update, "Выможете продолжить поиск или изменить настройки поиска");
         ReplyKeyboardMarkup replyKeyboardMarkup =
                 buttonsService.setButtons(buttonsService.createButtons(
                         Arrays.asList(
@@ -58,7 +47,7 @@ public class SendMessageService {
         InlineKeyboardMarkup inlineKeyboardMarkup =
                 buttonsService.setInlineButtons(buttonsService.createInlineButtons(
                         Arrays.asList(
-                                SHOW_PERON,
+                                SHOW_PERSON,
                                 SHOW_JOB_NAME,
                                 SHOW_AREA,
                                 SHOW_EXPERIENCE,
@@ -76,7 +65,7 @@ public class SendMessageService {
         InlineKeyboardMarkup inlineKeyboardMarkup =
                 buttonsService.setInlineButtons(buttonsService.createInlineButtons(
                         Arrays.asList(
-                                SHOW_PERON,
+                                SHOW_PERSON,
                                 SHOW_JOB_NAME,
                                 SHOW_AREA,
                                 SHOW_EXPERIENCE,

@@ -1,5 +1,6 @@
 package ru.gryaznov.bot.vacancy;
 
+//class for getting response
 public class Job {
     String id;
     String name;
