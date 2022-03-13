@@ -1,4 +1,4 @@
-package ru.gryaznov.bot.areaparse;
+package ru.gryaznov.bot.areaParse;
 
 import java.util.HashMap;
 

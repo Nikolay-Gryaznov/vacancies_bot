@@ -1,4 +1,4 @@
-package ru.gryaznov.bot.areaparse;
+package ru.gryaznov.bot.areaParse;
 
 import org.json.JSONArray;
 
