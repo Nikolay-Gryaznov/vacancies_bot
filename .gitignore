@@ -1,0 +1,5 @@
+.env
+build
+.idea
+# Project exclude paths
+/.gradle/
